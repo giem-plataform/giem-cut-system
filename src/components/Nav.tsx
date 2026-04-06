@@ -7,7 +7,7 @@ const links = [
   { href: "/dashboard", label: "Home", icon: "🏠" },
   { href: "/track", label: "Track", icon: "📝" },
   { href: "/meals", label: "Meals", icon: "🍽" },
-  { href: "/containers", label: "Prep", icon: "📦" },
+  { href: "/guide", label: "Guía", icon: "📖" },
   { href: "/weekly", label: "Stats", icon: "📊" },
 ];
 
