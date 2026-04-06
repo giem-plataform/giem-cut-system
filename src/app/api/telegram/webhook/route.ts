@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { sendMessage, type TelegramUpdate } from "@/lib/telegram";
-import { getDailySummary } from "@/lib/ai";
+import { getDailySummary, getRecommendation, getRecipeSuggestion } from "@/lib/ai";
 import { apiResponse, apiError, todayDate } from "@/lib/utils";
 
 export async function POST(req: NextRequest) {
@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
 
   try {
     if (text === "/start" || text === "/help") {
-      await sendMessage(chatId, `*GIEM Cut System*\n\nCommands:\n/status — Today's summary\n/weight 99.5 — Log weight\n/meal 1 Chicken rice 500cal 40p — Log meal\n/fast start — Start fast\n/fast stop — End fast\n/workout — Toggle workout done\n/tip — Get AI recommendation\n/containers — View container status`);
+      await sendMessage(chatId, `*GIEM Cut System* 🟢\n\n*Comandos:*\n/status — Resumen del dia\n/weight 99.5 — Registrar peso\n/meal 1 Pollo arroz 500cal 40p — Registrar comida\n/fast start — Iniciar ayuno\n/fast stop — Terminar ayuno\n/workout — Marcar ejercicio\n/tip — Tip de IA\n/recipe — Receta sugerida\n/ask [pregunta] — Pregunta libre a IA\n/containers — Ver contenedores`);
     } else if (text === "/status") {
       const [settings, dailyLog, meals, weight] = await Promise.all([
         prisma.settings.findUnique({ where: { id: "singleton" } }),
@@ -118,7 +118,7 @@ export async function POST(req: NextRequest) {
         update: { workoutDone: true },
       });
       await sendMessage(chatId, log.workoutDone ? "Workout logged! 💪" : "Workout toggled.");
-    } else if (text === "/tip") {
+    } else if (text === "/tip" || text === "/recipe" || text.startsWith("/ask")) {
       const [settings, dailyLog, meals, weight] = await Promise.all([
         prisma.settings.findUnique({ where: { id: "singleton" } }),
         prisma.dailyLog.findUnique({ where: { date: d } }),
@@ -128,8 +128,7 @@ export async function POST(req: NextRequest) {
       const totalCal = meals.reduce((s, m) => s + (m.calories || 0), 0);
       const totalProtein = meals.reduce((s, m) => s + (m.protein || 0), 0);
 
-      const { getRecommendation } = await import("@/lib/ai");
-      const tip = await getRecommendation({
+      const dayData = {
         weight: weight?.weight,
         targetWeight: settings?.targetWeight || 85,
         calories: totalCal || undefined,
@@ -140,8 +139,24 @@ export async function POST(req: NextRequest) {
         mealsLogged: meals.length,
         mealsTarget: settings?.mealsPerDay || 4,
         disciplineScore: dailyLog?.disciplineScore || 0,
-      });
-      await sendMessage(chatId, `💡 *Tip:* ${tip}`);
+      };
+
+      if (text === "/recipe") {
+        const nextMeal = meals.length + 1;
+        const recipe = await getRecipeSuggestion(dayData, nextMeal);
+        await sendMessage(chatId, `🍳 *Receta sugerida (comida ${nextMeal}):*\n\n${recipe}`);
+      } else if (text.startsWith("/ask")) {
+        const question = msg.text.trim().substring(4).trim();
+        if (!question) {
+          await sendMessage(chatId, "Uso: /ask tu pregunta aqui");
+        } else {
+          const answer = await getRecommendation(dayData, question);
+          await sendMessage(chatId, `🤖 ${answer}`);
+        }
+      } else {
+        const tip = await getRecommendation(dayData);
+        await sendMessage(chatId, `💡 *Tip:* ${tip}`);
+      }
     } else if (text === "/containers") {
       const containers = await prisma.container.findMany({ orderBy: { createdAt: "asc" } });
       const statusEmoji: Record<string, string> = { empty: "⬜", prepped: "🟩", eaten: "🟥" };
