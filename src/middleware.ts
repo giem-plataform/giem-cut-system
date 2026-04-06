@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jwtVerify } from "jose";
 
-const PUBLIC_PATHS = ["/login", "/api/auth", "/api/telegram/webhook", "/api/cron/reminders"];
+const PUBLIC_PATHS = ["/login", "/api/auth", "/api/telegram", "/api/cron/reminders"];
 const secret = new TextEncoder().encode(process.env.JWT_SECRET || "fallback-dev-secret");
 
 export async function middleware(req: NextRequest) {
