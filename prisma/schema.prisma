@@ -1,0 +1,86 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model WeightLog {
+  id        String   @id @default(cuid())
+  weight    Float
+  note      String?
+  date      DateTime @db.Date
+  createdAt DateTime @default(now())
+
+  @@index([date])
+}
+
+model FastingLog {
+  id        String    @id @default(cuid())
+  startTime DateTime
+  endTime   DateTime?
+  targetMin Int       @default(720)
+  date      DateTime  @db.Date
+  createdAt DateTime  @default(now())
+
+  @@index([date])
+}
+
+model MealLog {
+  id       String   @id @default(cuid())
+  mealNum  Int
+  name     String
+  calories Int?
+  protein  Int?
+  carbs    Int?
+  fat      Int?
+  date     DateTime @db.Date
+  createdAt DateTime @default(now())
+
+  @@index([date])
+}
+
+model Container {
+  id        String   @id @default(cuid())
+  label     String
+  contents  String?
+  prepDate  DateTime? @db.Date
+  status    String   @default("empty")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model DailyLog {
+  id              String   @id @default(cuid())
+  date            DateTime @unique @db.Date
+  disciplineScore Int      @default(0)
+  fastingDone     Boolean  @default(false)
+  mealsLogged     Int      @default(0)
+  workoutDone     Boolean  @default(false)
+  sleepHours      Float?
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model Settings {
+  id              String  @id @default("singleton")
+  fastingStart    String  @default("14:00")
+  fastingEnd      String  @default("02:00")
+  targetWeight    Float   @default(85)
+  targetCalories  Int     @default(2000)
+  targetProtein   Int     @default(160)
+  mealsPerDay     Int     @default(4)
+  telegramChatId  String?
+  reminderEnabled Boolean @default(true)
+}
+
+model Reminder {
+  id        String   @id @default(cuid())
+  time      String
+  message   String
+  enabled   Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
